@@ -1,5 +1,5 @@
 ---
-title: "Visual Analytics"
+title: "ISSS608 - Visual Analytics"
 description: |
   Welcome to the website. I hope you enjoy it!
 site: distill::distill_website
