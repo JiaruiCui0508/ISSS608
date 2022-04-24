@@ -8,13 +8,13 @@ navbar:
     - text: "Take-home Exercise"
       menu:
       - text: "Take-home Exercise 1"
-        herf: "Take-home-exercise-01/Take-home-exercise-01.html"
+        href: "TH_ex/TH_ex01.html"
     - text: "DataViz Makeover"
       menu:
       - text: "DataViz Makeover 1"
-        herf: "DataViz1"    
+        href: "DataViz1"    
       - text: "DataViz Makeover 2"
-        herf: "DataViz2"   
+        href: "DataViz2"   
   right:
     - text: "Home"
       href: index.html
