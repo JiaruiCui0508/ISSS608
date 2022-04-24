@@ -1,9 +1,20 @@
 name: "ISSS608"
 title: "Visual Analytics"
 description: |
-  Visual Analytics
+  ISSS608 Visual Analytics 
 output_dir: "_site"
 navbar:
+  left:
+    - text: "Take-home Exercise"
+      menu:
+      - text: "Take-home Exercise 1"
+        herf: "Take-home-exercise-01/Take-home-exercise-01.html"
+    - text: "DataViz Makeover"
+      menu:
+      - text: "DataViz Makeover 1"
+        herf: "DataViz1"    
+      - text: "DataViz Makeover 2"
+        herf: "DataViz2"   
   right:
     - text: "Home"
       href: index.html

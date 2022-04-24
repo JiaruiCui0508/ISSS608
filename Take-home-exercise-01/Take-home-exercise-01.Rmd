@@ -1,0 +1,129 @@
+---
+title: "Take-home exercise 1"
+description: 
+  ISSS608 Visual Analytics Take-home Exercise 1
+author:
+  - name: Jiarui Cui
+    url: www.linkedin.com/in/jiarui-cui-482232195
+    affiliation: School of Computing and Information Systems
+    affiliation_url: https://scis.smu.edu.sg/
+date: "`r Sys.Date()`"
+output: distill::distill_article
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Distill is a publication format for scientific and technical writing, native to 
+the web. 
+
+Learn more about using Distill for R Markdown at <https://rstudio.github.io/distill>.
+
+# Overview
+
+In this take home exercise, appropriate static statistical graphics methods are used to reveal the demographic of the city of Engagement, Ohio USA.
+
+The data should be processed by using appropriate tidyverse family of packages 
+and the statistical graphics must be prepared using ggplot2 and its extensions.
+
+# Getting Started
+
+Before we get started, it is important for us to ensure that the required R packages have been installed. If yes, we will load the R packages. 
+
+If they have yet to be installed, we will install the R packages and load them 
+onto R environment.
+
+The chunk code on the right will do the trick.
+
+```{r}
+packages = c('tidyverse','ggridges','plyr')
+
+for(p in packages){
+  if (!require(p,character.only=T)){
+    install.packages(p)}
+  library(p,character.only = T)
+}
+```
+
+# Importing Data
+
+The code chunk below import *Participants.csv* and *Jobs.csv* from the data folder into R by using [`read_csv()`](https://readr.tidyverse.org/reference/read_delim.html) of [**readr**](https://readr.tidyverse.org/) and save it as tibble dataframes respectively called *participants* and *jobs*.
+
+```{r}
+participants <- read_csv('Data/Participants.csv')
+jobs <- read_csv('Data/Jobs.csv')
+```
+
+# Insights 1
+
+The code chunk below plots the distribution of joviality in different educationLevels by using geom_boxplot().
+
+**From this boxplot it is observed that people in higher education level tend to have slightly higher joviality.**
+
+```{r}
+participants$educationLevel <- factor(participants$educationLevel,
+                                      levels = c("Low", "HighSchoolOrCollege",
+                                                 "Bachelors", "Graduate"))
+ggplot(data=participants, 
+       aes(y = joviality, x = educationLevel,fill = educationLevel)) +
+           geom_boxplot() + stat_summary(geom = "point",fun="mean")
+
+```
+# Insights 2
+
+The code chunk below plots the rate of having kids in different educationLevels in staked barchart by using geom_bar().
+
+**The staked barchart below reveals the trend towards lower fertility rates as residents become more educated.**
+
+```{r}
+ggplot(data = participants,aes(x= educationLevel, fill = haveKids)) + 
+  geom_bar(stat="count", position ="fill") +
+  theme(axis.text.x = element_text()) +
+  labs(x ="EducationLevel", y = "Percentage") +
+  scale_y_continuous(labels = scales::percent)
+```
+# Insights 3
+
+The code chunk below plots density lines of joviality for participants having kids and not having kids across 4 different agegroup by using colour or fill arguments of aes().
+
+**From the density plot below it can be seen that for residents aged below 30, distribution of joviality of who have kids are higher that without kids. While for residents aged above 30, the distribution of joviality displays an opposite trend.**
+
+```{r}
+
+participants$agegroup <- cut(participants$age, breaks = c(17,30,40,50,60), 
+                             labels = c("18-30","30-40","40-50","50-60"))
+
+ggplot(data=participants, 
+       aes(x =joviality,colour = haveKids)) +
+  geom_density()+
+  facet_wrap(~ agegroup,nrow = 2)
+```
+# Insights 4
+
+The code chunk below plots density lines of joviality for participants having kids and not having kids across 4 different education levels by using colour or fill arguments of aes().
+
+**From the density plot below it can be seen that for residents with lower educationlevel, distribution of joviality of who have kids are higher than that without kids. While for residents possessing bachelor and master degrees, the distribution of joviality are higher for those without kids.**
+
+```{r}
+
+ggplot(data=participants, 
+       aes(x =joviality,colour = haveKids)) +
+  geom_density()+
+  facet_wrap(~ educationLevel,nrow = 2)
+```
+# Insights 5
+
+The code chunk below plots the distribution of hourly rate in of jobs with different education requirements by using geom_boxplot().
+
+**From this boxplot it is observed that jobs that requires higher education level tend to pay more per hour.**
+
+```{r}
+jobs$educationRequirement <- factor(jobs$educationRequirement,
+                                      levels = c("Low", "HighSchoolOrCollege",
+                                                 "Bachelors", "Graduate"))
+ggplot(data=jobs, aes(y = hourlyRate, x = educationRequirement,
+                      fill = educationRequirement)) + 
+      geom_boxplot() + ylim(0, 50) + stat_summary(geom = "point",fun="mean")
+```
+
