@@ -35,7 +35,7 @@ The chunk code on the right will do the trick.
 
 ```{r}
 packages = c('tidyverse', 'plotly', 'readxl', 'knitr', 'dplyr', 'ggplot2', 
-             'grid')
+             'grid', 'ggridges')
 
 for(p in packages){
   if(!require(p, character.only = T)){
@@ -87,6 +87,9 @@ Now, let's look into the charts!
 
 The original design planned to show the simple age distribution between participants having kids & not having kids.
 
+While the histogram displayed above is not informative to show either a comparable proportion of having kids in each age group or a clear age distribution in separately with who have kids and not. 
+
+
 ```{r}
 ggplot(participants,aes(age,fill=havekids))+
   geom_histogram(bins=(max(participants$age)-min(participants$age))/2,color="grey30")+
@@ -95,9 +98,7 @@ ggplot(participants,aes(age,fill=havekids))+
   theme(plot.title = element_text(hjust = 0.5))
 ```
 
-While the histogram displayed above is not informative to show either a comparable proportion of having kids in each age group or a clear age distribution in separately with who have kids and not. 
-
-In this case I would recommend to using a stacked barchart to inllustrate the fertility rate in each age group.
+In this case I would recommend to using a stacked barchart to inllustrate the fertility rate in each age group.From the stacked barplot we can observe that people aged from 30-42 have higher rates of having kids than the other age groups.
 
 ```{r}
 participants$agegroup <- cut(participants$age, 
@@ -115,7 +116,20 @@ ggplot(data = participants,aes(x= agegroup, fill = havekids)) +
   scale_y_continuous(labels = scales::percent)
 
 ```
-From the stacked barplot we can observe that people aged from 30-42 have higher rates of having kids than the other age groups.
+
+I would also recommend to construct 2 histograms of age separately for residents having kids and not having kids.
+
+```{r}
+ggplot(participants,aes(x = age))+
+  geom_histogram(bins=(max(participants$age)-
+                         min(participants$age))/2,
+                 fill = 'orange',color = 'black')+
+  facet_grid(havekids ~.)+
+  ggtitle("Age distribution with kids status")+
+  xlab("Age")+ylab("Number of Participants")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+```
 
 ### 4.2 Pie chart of age groups
 
@@ -189,5 +203,32 @@ ggplot(participants,aes(y=wage,x=educationlevel,fill = educationlevel))+
   stat_summary(geom ="point")+
   xlab("Education Level")+ylab("Income")+
   ggtitle("Income vs Education Level")+
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+### 4.4 Happiness vs income group
+
+The original design clearly showed that the residents with a low income display the highest distribution of joviality.
+
+```{r}
+participants<-participants%>%mutate(incomegroup=case_when(
+  wage<quantile(participants$wage,probs=c(.25))~"Low Income",
+  wage>=quantile(participants$wage,probs=c(.25))
+  &wage<quantile(participants$wage,probs=c(.75))~"Mid Income",
+  wage>=quantile(participants$wage,probs=c(.75)) ~"High Income"))
+
+ggplot(participants,aes(y=Happiness,x=incomegroup))+
+  geom_boxplot()+
+  stat_summary(geom ="point")+
+  xlab("Income group")+ylab("Happiness")+
+  ggtitle("Happiness vs income group")+
+  theme(plot.title = element_text(hjust = 0.5))
+```
+I experimented with the density plot, which gives a more detailed distribution. From the density plot we can observe that people with a mid income distribute the lowest joviality, people with a low income are the happiest, and the distribution of high income people is remarkably diverse in both direction.
+
+```{r}
+ggplot(participants, aes(x = Happiness, y = incomegroup)) + 
+  geom_density_ridges(rel_min_height = 0.01,scale = 1) +
+  ggtitle("Joviality Spread by Income Group")+
   theme(plot.title = element_text(hjust = 0.5))
 ```
