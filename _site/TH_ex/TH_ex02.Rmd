@@ -1,0 +1,193 @@
+---
+title: "Take-home exercise 2"
+description: |
+  ISSS608 Visual Analytics Take-home Exercise 2
+author:
+  - name: Jiarui Cui
+    url: www.linkedin.com/in/jiarui-cui-482232195
+    affiliation: School of Computing and Information Systems
+    affiliation_url: https://scis.smu.edu.sg/
+date: "`r Sys.Date()`"
+output: distill::distill_article
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Distill is a publication format for scientific and technical writing, native to the web. 
+
+Learn more about using Distill for R Markdown at <https://rstudio.github.io/distill>.
+
+# 1.Overview
+
+This article aims to conduct a peer review of take-home exercise 01 for student [`Bomin Kim`](https://bominie.netlify.app/posts/2022-04-25-hw1/)，critic the submission in terms of clarity and aesthetics, and
+remake the original design by using the data visualisation principles learned in Lesson 1 and 2.
+
+# 2.Getting Started
+
+Before we get started, it is important for us to ensure that the required R packages have been installed. If yes, we will load the R packages. 
+
+If they have yet to be installed, we will install the R packages and load them 
+onto R environment.
+
+The chunk code on the right will do the trick.
+
+```{r}
+packages = c('tidyverse', 'plotly', 'readxl', 'knitr', 'dplyr', 'ggplot2', 
+             'grid')
+
+for(p in packages){
+  if(!require(p, character.only = T)){
+    install.packages(p)
+  }
+  library(p, character.only = T)
+}
+```
+
+# 3.Importing & Preparig the Data
+
+The code chunk below import *Participants.csv* and *FinancialJournal.csv* from the data folder into R by using [`read_csv()`](https://readr.tidyverse.org/reference/read_delim.html) of [**readr**](https://readr.tidyverse.org/) and save it as tibble dataframes respectively called *participants* and *FinancialJournal*.
+
+```{r}
+participants <- read_csv("data/participants.csv")
+FinancialJournal <- read_csv("data/FinancialJournal.csv")
+```
+
+
+The student has also rebuilt the dataframe by simplifying the column names.
+
+```{r}
+participants <- participants %>%
+  rename('householdsize'='householdSize',
+         'havekids'='haveKids',
+         'educationlevel'='educationLevel',
+         'interestgroup'='interestGroup',
+         'Happiness'='joviality')
+```
+
+```{r}
+Wage <- FinancialJournal %>%
+  filter(category == "Wage") %>%
+  group_by(participantId) %>%
+  select(participantId, amount) %>%
+  summarise(wage = mean(amount))
+
+write_rds(Wage,"data/wage.rds")
+
+wage<-read_rds("data/wage.rds")
+participants <- merge(x = participants, y = wage[ ,c("participantId","wage")],
+by="participantId", all.x=TRUE)
+```
+
+Now, let's look into the charts!
+
+# 4.Peer Review
+### 4.1 First glimp of age distribution
+
+The original design planned to show the simple age distribution between participants having kids & not having kids.
+
+```{r}
+ggplot(participants,aes(age,fill=havekids))+
+  geom_histogram(bins=(max(participants$age)-min(participants$age))/2,color="grey30")+
+  ggtitle("Age distribution with kids status")+
+  xlab("Age")+ylab("# of Participants")+
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+While the histogram displayed above is not informative to show either a comparable proportion of having kids in each age group or a clear age distribution in separately with who have kids and not. 
+
+In this case I would recommend to using a stacked barchart to inllustrate the fertility rate in each age group.
+
+```{r}
+participants$agegroup <- cut(participants$age, 
+                             breaks = c(17,22,26,30,34,38,42,46,50,54,58,63), 
+                             labels = c("18-22","22-26","26-30","30-34",
+                                        "34-38","38-42","42-46","46-50",
+                                        "50-54","54-58","58-62"))
+
+ggplot(data = participants,aes(x= agegroup, fill = havekids)) + 
+  geom_bar(stat="count", position ="fill") +
+  ggtitle("Age distribution with kids status")+
+  theme(plot.title = element_text(hjust = 0.5))+
+  xlab("Age")+ylab("# of Participants")+
+  labs(x ="Age", y = "Percentage") +
+  scale_y_continuous(labels = scales::percent)
+
+```
+From the stacked barplot we can observe that people aged from 30-42 have higher rates of having kids than the other age groups.
+
+### 4.2 Pie chart of age groups
+
+The original design planned to simply display the distribution of each age group. While piechart is not recommended since it contains not much information and taking up large space. 
+
+```{r}
+participants<-participants%>%mutate(agegroup=case_when(age<30~"Below 30",
+                                    age>=30 &age<40~"30-39",
+                                    age>=40 &age<50~"40-49",
+                                    age>=50 ~"50 and above"))
+
+piedf <- participants %>% count(agegroup,sort=TRUE)
+
+ggplot(piedf, aes(x="", y=n, fill=agegroup)) +
+  geom_bar(stat="identity", width=1, color="white") +
+  coord_polar("y", start=0) +
+  theme_void() +
+  geom_label(aes(label =n), 
+             position = position_stack(vjust = 0.5), 
+             show.legend = FALSE) +
+  scale_fill_brewer() +
+  ggtitle("Age Group in Ohio USA") +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+In this case, I would recommend using a simple barplot to show a more straightward view and sort the bars in descending proportion.
+
+From the chart it is observed that residents in age wise are evenly distributed.
+
+```{r}
+participants<-participants%>%mutate(agegroup=case_when(age<30~"Below 30",
+                                    age>=30 &age<40~"30-39",
+                                    age>=40 &age<50~"40-49",
+                                    age>=50 ~"50 and above"))
+
+ggplot(data = participants,
+       aes(x=reorder(agegroup, agegroup, function(x)-length(x)))) +
+  geom_bar(fill = 'lightblue') +
+  ylim(0,300) +
+  geom_text(stat="count", 
+      aes(label=paste0(..count.., " (", 
+      round(..count../sum(..count..)*100,
+            1), "%)")),
+      vjust=-1) +
+  xlab("Agegroup") +
+  ylab("Number of Participants") +
+  ggtitle("Age group of Participants")+
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+### 4.3 Education level vs wage
+
+The original design was to show income distribution of participants across different education level, so as to find the relationship between income and education. While the histogram below is not effectively revealing the pattern, especially for whose income over 400, since the number of participants is too small, differentiation between education level is hardly available.
+
+```{r}
+ggplot(participants, aes(x=wage, fill=educationlevel))+
+  geom_histogram(color="grey30")+
+  xlab("Income")+ylab("# of Participants")+
+  ggtitle("Education level vs income")+
+  theme(plot.title = element_text(hjust = 0.5))
+```
+In this case, I would recommend adopting a boxplot which directly displays the distribution of income for each education level. I also sort the education level in an ascending order. From the plot we can observe that there is a remarable increase in income as the education level get higher.
+
+```{r}
+
+participants$educationlevel <- factor(participants$educationlevel,
+                                      levels = c("Low", "HighSchoolOrCollege",
+                                                 "Bachelors", "Graduate"))
+ggplot(participants,aes(y=wage,x=educationlevel,fill = educationlevel))+
+  geom_boxplot()+
+  ylim(30,170)+
+  stat_summary(geom ="point")+
+  xlab("Education Level")+ylab("Income")+
+  ggtitle("Income vs Education Level")+
+  theme(plot.title = element_text(hjust = 0.5))
+```
