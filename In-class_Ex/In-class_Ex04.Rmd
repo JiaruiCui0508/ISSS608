@@ -1,0 +1,51 @@
+---
+title: "In-class Exercise 04"
+description: |
+  ISSS608 Visual 
+author:
+  - name: CUI JIARUI 
+    url: https://example.com/norajones
+    affiliation: Spacely Sprockets
+    affiliation_url: https://example.com/spacelysprokets
+date: "`r Sys.Date()`"
+output: distill::distill_article
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,eval = TRUE,message = FALSE,warning = FALSE)
+```
+
+# Getting Started
+
+## Setting up R packages
+
+To start with, [ggstatsplot](https://indrajeetpatil.github.io/ggstatsplot/index.html) and tidyverse packages will be launched using library().
+
+```{r}
+packages = c('ggstatsplot', 'tidyverse','rstantools')
+for (p in packages){
+  if(!require(p, character.only = T)){
+    install.packages(p)
+  }
+}
+```
+
+## Importing Data
+
+```{r}
+exam <- read_csv("data/Exam_data.csv")
+```
+
+## Working with ggstatsplot
+
+### ANOVA Test
+
+```{r fig.width=6, fig.height=8}
+set.seed(1234)
+ggbetweenstats(
+  data = exam,
+  x = RACE, 
+  y = ENGLISH,
+  type = "bayes"
+)
+```
