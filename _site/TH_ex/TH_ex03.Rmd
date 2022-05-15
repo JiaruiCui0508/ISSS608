@@ -1,0 +1,184 @@
+---
+title: "Take-home exercise 3"
+description: |
+  ISSS608 Visual Analytics Take-home Exercise 3
+author:
+  - name: Jiarui Cui
+    url: www.linkedin.com/in/jiarui-cui-482232195
+    affiliation: School of Computing and Information Systems
+    affiliation_url: https://scis.smu.edu.sg/
+date: "`r Sys.Date()`"
+output: distill::distill_article
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Distill is a publication format for scientific and technical writing, native to the web. 
+
+Learn more about using Distill for R Markdown at <https://rstudio.github.io/distill>.
+
+# Overview
+
+This take-home exercise aims to reveal the economic of the city of Engagement, Ohio USA by using appropriate static and interactive statistical graphics methods.
+
+The main question to be answered is displayed as below:
+
+```
+- Over time, are businesses growing or shrinking? 
+- How are people changing jobs? 
+- Are standards of living improving or declining over time?
+```
+
+Besides, the 2nd of the 3 questions will be addressed with the consideration of financial status of Engagement’s businesses and residents and application of visual analytic techniques.
+
+```
+- How does the financial health of the residents change over the 
+  period covered by the dataset? 
+- How do wages compare to the overall cost of living in Engagement? 
+- Are there groups that appear to exhibit similar patterns? 
+```
+
+# Getting started
+
+```{r}
+packages = c('ggiraph', 'plotly', 
+             'DT', 'patchwork',
+             'gganimate', 'tidyverse',
+             'readxl', 'gifski', 'gapminder',
+             'treemap', 'treemapify',
+             'rPackedBar','lubridate','ViSiElse','zoo')
+for (p in packages){
+  if(!require(p, character.only = T)){
+    install.packages(p)
+  }
+  library(p,character.only = T)
+}
+```
+
+# Importing Data
+
+The code chunk below import *Participants.csv* and *FinancialJournal.csv* from the data folder into R by using [`read_csv()`](https://readr.tidyverse.org/reference/read_delim.html) of [**readr**](https://readr.tidyverse.org/) and save it as tibble dataframes respectively called *participants* and *finjournal*.
+
+```{r}
+finjournal <- read_csv('Data/FinancialJournal.csv')%>%
+  mutate(yearmonth = as.yearmon(timestamp))
+
+participants <- read_csv('Data/Participants.csv')
+```
+
+# Data preparation
+
+According to [`Investopedia`](https://www.investopedia.com/terms/f/financial-health.asp),the measurement financial health includes the **amount of savings** as well as the **spending on fixed or non-discretionary expenses**.
+
+In this case, a new table called **personal_monthly_savings** is established by summing up the financial amounts group by participantId and year-month.
+
+```{r}
+grp1 <- c('participantId','yearmonth')
+
+personal_monthly_savings <- finjournal[, c('participantId','yearmonth', 'amount')]%>% 
+  group_by(across(all_of(grp1))) %>% 
+  summarize(monthly_savings = sum(amount))
+
+personal_monthly_savings1 <- merge(personal_monthly_savings,participants,by="participantId")
+```
+
+In addition, another table called **personal_categorized_consumption** is built by summing up the financial amounts group by participantId and category.
+
+```{r}
+grp2 <- c('participantId','category')
+
+personal_categorized_consumption <- finjournal[, c('participantId','category', 'amount')]%>% 
+  group_by(across(all_of(grp2))) %>% 
+  summarize(cashflow = sum(amount))
+
+personal_categorized_consumption1 <- merge(personal_categorized_consumption,participants,by="participantId")
+```
+# Insight for Average monthly savings
+
+From the interactive barchart below we can observe that the average savings per month for all residents mainly varies from $2000 to $3000, except for March 2022, when the figure exceed $4000. There is no significant increase or decrease over 15 months, while the average savings for the recent 3 month are steadily decreasing, pointing out a potential threat towards their financial health.
+
+```{r}
+tooltip <- function(y, ymax, accuracy = .01) {
+  mean <- scales::number(y, accuracy = accuracy)
+  sem <- scales::number(ymax - y, accuracy = accuracy)
+  paste("Mean monthly savings:", mean, "+/-", sem)
+} 
+
+gg_point <- ggplot(data=personal_monthly_savings, 
+                   aes(x = yearmonth),
+) +
+  stat_summary(aes(y = monthly_savings,
+                   tooltip = after_stat(
+                     tooltip(y, ymax))),
+    fun.data = "mean_se", 
+    geom = GeomInteractiveCol,
+    fill = "light blue"
+  ) +
+  stat_summary(aes(y = monthly_savings),
+    fun.data = mean_se,
+    geom = "errorbar", width = 0.05, size = 0.1
+  )
+girafe(ggobj = gg_point,
+       width_svg = 10,
+       height_svg = 10*0.618)
+```
+Looking at the monthly savings for different education level, it is apparent that residents with higher education level (bachelor & graduate degree) tend to show significantly higher savings than the other groups. The overtime patter across all 4 groups are almost the same, while as the education level become higher, the average figures increase as well.
+
+```{r}
+tooltip <- function(y, ymax, accuracy = .01) {
+  mean <- scales::number(y, accuracy = accuracy)
+  sem <- scales::number(ymax - y, accuracy = accuracy)
+  paste("Mean monthly savings:", mean, "+/-", sem)
+} 
+
+gg_point <- ggplot(data=personal_monthly_savings1, 
+                   aes(x = yearmonth),
+) +
+  stat_summary(aes(y = monthly_savings,
+                   tooltip = after_stat(
+                     tooltip(y, ymax))),
+    fun.data = "mean_se", 
+    geom = GeomInteractiveCol,
+    fill = "light blue"
+  ) +
+  stat_summary(aes(y = monthly_savings),
+    fun.data = mean_se,
+    geom = "errorbar", width = 0.05, size = 0.1
+  )+
+  facet_wrap(~ educationLevel,nrow = 2)
+girafe(ggobj = gg_point,
+       width_svg = 10,
+       height_svg = 10*0.618)
+```
+# Insights for consumptions
+
+From the interactive bar-chart below, is is observed that there is hardly differences in allocation of expenditure across different education level. Cost for shelter takes up the largest proportion, followed by recreation, food and education. Since shelter, as a fixed/non-discretionary expense accounts for the most, there is concern of their financial health, especially for the residents with lower education level, for their lower wages.
+
+```{r}
+tooltip <- function(y, ymax, accuracy = .01) {
+  mean <- scales::number(y, accuracy = accuracy)
+  sem <- scales::number(ymax - y, accuracy = accuracy)
+  paste("Mean consumption:", mean, "+/-", sem)
+} 
+
+gg_point <- ggplot(data=personal_categorized_consumption1, 
+                   aes(x = category),
+) +
+  stat_summary(aes(y = cashflow,fill = category,
+                   tooltip = after_stat(
+                     tooltip(y, ymax))),
+    fun.data = "mean_se", 
+    geom = GeomInteractiveCol,
+    #fill = "light blue"
+  ) +
+  stat_summary(aes(y = cashflow),
+    fun.data = mean_se,
+    geom = "errorbar", width = 0.6, size = 0.3
+  )+
+  facet_wrap(~ educationLevel,nrow = 2)
+girafe(ggobj = gg_point,
+       width_svg = 10,
+       height_svg = 10*0.618)
+```
