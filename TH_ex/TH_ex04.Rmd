@@ -1,0 +1,137 @@
+---
+title: "Take-home exercise 4"
+description: |
+  ISSS608 Visual Analytics Take-home Exercise 4
+author:
+  - name: Jiarui Cui
+    url: www.linkedin.com/in/jiarui-cui-482232195
+    affiliation: School of Computing and Information Systems
+    affiliation_url: https://scis.smu.edu.sg/
+date: "`r Sys.Date()`"
+output: distill::distill_article
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Overview
+
+This take-home exercise aims to reveal the daily routines of two selected participant of the city of Engagement, Ohio USA by using use ViSIElse and other appropriate visual analytics methods.
+
+# Importing Packages
+
+In this take-home exercise, the following R packages will be used:
+ - sf, an R package specially designed to handle geospatial data in simple feature objects.
+ 
+```{r}
+packages = c('lubridate', 'tidyverse', 
+             'readr','tmap','sf','sftime',
+             'clock','rmarkdown','ViSiElse',
+             'fastDummies')
+for (p in packages){
+  if(!require(p, character.only = T)){
+    install.packages(p)
+  }
+  library(p,character.only = T)
+}
+```
+# Importing data
+
+```{r eval = FALSE}
+logs_fread <- list.files(path = "Data/ActivityLogs/",
+                  pattern = "*.csv", 
+                  full.names = T) %>% 
+  map_df(~fread(.))
+```
+```{r}
+buildings <- read_sf("Data/Buildings.csv", 
+                   options = "GEOM_POSSIBLE_NAMES=location")
+```
+
+```{r eval = FALSE,echo = FALSE}
+write_rds(logs_fread,"Data/logs_fread.rds")
+```
+
+```{r echo = FALSE}
+logs_fread <- read_rds('Data/logs_fread.rds')
+```
+
+# Data preparation
+
+```{r}
+logs_fread$month <- factor(month(logs_fread$`timestamp`), 
+                    levels=1:12, 
+                    labels=month.abb, 
+                    ordered=TRUE) 
+logs_fread$date <- as_date(logs_fread$`timestamp`)
+
+logs_March <- logs_fread %>% filter(month == 'Mar')
+```
+
+```{r}
+logs_March$time <- format(logs_March$timestamp, format = "%H:%M:%S")
+```
+
+```{r}
+log_participant4 = logs_March %>% filter(participantId==4)
+log_participant16 = logs_March %>% filter(participantId==16)
+```
+
+```{r}
+tmap_mode("view")
+tm_shape(buildings)+
+tm_polygons(col = "grey60",
+           size = 1,
+           border.col = "black",
+           border.lwd = 1)
+```
+
+```{r}
+participant4_balance <- log_participant4%>% 
+  group_by(date) %>% 
+  summarize(Balance = mean(availableBalance))
+
+participant16_balance <- log_participant16%>% 
+  group_by(date) %>% 
+  summarize(Balance = mean(availableBalance))
+```
+
+## Balance comparison
+
+The line chart below presents the available balance for participant 4 and 16 throughout March 2022. 
+
+```{r}
+balance_comparison <- merge(participant4_balance,participant16_balance,
+                            by="date")
+ggplot(balance_comparison, aes(date)) + 
+  geom_line(aes(y = Balance.x, colour = "participant 4")) + 
+  geom_line(aes(y = Balance.y, colour = "participant 16"))
+  
+```
+
+```{r eval = FALSE,echo = FALSE}
+grouped <- log_participant4 %>% 
+  count(time, currentMode) %>% 
+  ungroup() %>%
+  na.omit()
+ggplot(grouped, 
+       aes(time, 
+           currentMode, 
+           fill = n)) + 
+geom_tile(color = "white", 
+          size = 0.1) + 
+theme_tufte(base_family = "Helvetica") + 
+coord_equal() +
+scale_fill_gradient(name = "Frequency",
+                    low = "sky blue", 
+                    high = "dark blue") +
+labs(x = NULL, 
+     y = NULL, 
+     title = "Attacks by weekday and time of day") +
+theme(axis.ticks = element_blank(),
+      plot.title = element_text(hjust = 0.5),
+      legend.title = element_text(size = 8),
+      legend.text = element_text(size = 6) )
+```
+
