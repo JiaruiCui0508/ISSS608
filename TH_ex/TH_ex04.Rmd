@@ -36,6 +36,7 @@ for (p in packages){
   library(p,character.only = T)
 }
 ```
+
 # Importing data
 
 ```{r eval = FALSE}
@@ -59,6 +60,8 @@ logs_fread <- read_rds('Data/logs_fread.rds')
 
 # Data preparation
 
+Create label **date**, **time**, and **hours**.
+
 ```{r}
 logs_fread$month <- factor(month(logs_fread$`timestamp`), 
                     levels=1:12, 
@@ -71,19 +74,18 @@ logs_March$time <- format(logs_March$timestamp, format = "%H:%M:%S")
 logs_March$hour <-hour(logs_March$`timestamp`)
 ```
 
-```{r}
-log_participant4 = logs_March %>% filter(participantId==4)
-log_participant16 = logs_March %>% filter(participantId==16)
-```
+Change the time into numerical value - number of minutes
 
 ```{r}
-tmap_mode("view")
-tm_shape(buildings)+
-tm_polygons(col = "grey60",
-           size = 1,
-           border.col = "black",
-           border.lwd = 1)
+log_participant4 = logs_March %>% mutate(date = date(timestamp),
+         time = (hour(timestamp)*60+minute(timestamp))) %>%
+  filter(participantId== 4)
+log_participant16 = logs_March %>% mutate(date = date(timestamp),
+         time = (hour(timestamp)*60+minute(timestamp))) %>%
+  filter(participantId== 16)
 ```
+
+Calculate their daily average balance.
 
 ```{r}
 participant4_balance <- log_participant4%>% 
@@ -107,6 +109,8 @@ ggplot(balance_comparison, aes(date)) +
   geom_line(aes(y = Balance.y, colour = "participant 16"))
   
 ```
+
+# Daily routine comparison
 
 ```{r}
 grouped4 <- log_participant4 %>% 
@@ -152,3 +156,125 @@ theme(axis.ticks = element_blank(),
       legend.text = element_text(size = 3) )
 ```
 
+```{r}
+get_home_time4 <- (log_participant4%>%
+          filter(currentMode == 'AtHome'))[, c('date','time')]%>%
+  group_by(date) %>% 
+  summarize(get_home = min(time))
+
+leave_home_time4 <- (log_participant4%>%
+          filter(currentMode == 'AtHome'))[, c('date','time')]%>%
+  group_by(date) %>% 
+  summarize(leave_home = max(time))
+
+start_travel_time4 <- (log_participant4%>%
+          filter(currentMode == 'Transport'))[, c('date','time')]%>%
+  group_by(date) %>% 
+  summarize(start_travel = min(time))
+
+end_travel_time4 <-(log_participant4%>%
+          filter(currentMode == 'Transport'))[, c('date','time')]%>%
+  group_by(date) %>% 
+  summarize(end_travel = max(time))
+
+start_work_time4 <- (log_participant4%>%
+          filter(currentMode == 'AtWork'))[, c('date','time')]%>%
+  group_by(date) %>% 
+  summarize(start_work = min(time))
+
+end_work_time4 <-  (log_participant4%>%
+          filter(currentMode == 'AtWork'))[, c('date','time')]%>%
+  group_by(date) %>% 
+  summarize(end_work  = max(time))
+
+get_restaurant_time4 <-  (log_participant4%>%
+          filter(currentMode == 'AtRestaurant'))[, c('date','time')]%>%
+  group_by(date) %>% 
+  summarize(get_restaurant = min(time))
+
+leave_restaurant_time4 <- (log_participant4%>%
+          filter(currentMode == 'AtRestaurant'))[, c('date','time')]%>%
+  group_by(date) %>% 
+  summarize(leave_restaurant  = max(time))
+
+start_recreation_time4 <- (log_participant4%>%
+          filter(currentMode == 'AtRecreation'))[, c('date','time')]%>%
+  group_by(date) %>% 
+  summarize(start_recreation = min(time))
+
+end_recreation_time4 <- (log_participant4%>%
+          filter(currentMode == 'AtRecreation'))[, c('date','time')]%>%
+  group_by(date) %>% 
+  summarize(end_recreation  = max(time))
+
+get_home_time16 <- (log_participant16%>%
+          filter(currentMode == 'AtHome'))[, c('date','time')]%>%
+  group_by(date) %>% 
+  summarize(get_home = min(time))
+
+leave_home_time16 <- (log_participant16%>%
+          filter(currentMode == 'AtHome'))[, c('date','time')]%>%
+  group_by(date) %>% 
+  summarize(leave_home = max(time))
+
+start_travel_time16 <- (log_participant16%>%
+          filter(currentMode == 'Transport'))[, c('date','time')]%>%
+  group_by(date) %>% 
+  summarize(start_travel = min(time))
+
+end_travel_time16 <-(log_participant16%>%
+          filter(currentMode == 'Transport'))[, c('date','time')]%>%
+  group_by(date) %>% 
+  summarize(end_travel = max(time))
+
+start_work_time16 <- (log_participant16%>%
+          filter(currentMode == 'AtWork'))[, c('date','time')]%>%
+  group_by(date) %>% 
+  summarize(start_work = min(time))
+
+end_work_time16 <-  (log_participant16%>%
+          filter(currentMode == 'AtWork'))[, c('date','time')]%>%
+  group_by(date) %>% 
+  summarize(end_work  = max(time))
+
+get_restaurant_time16 <-  (log_participant16%>%
+          filter(currentMode == 'AtRestaurant'))[, c('date','time')]%>%
+  group_by(date) %>% 
+  summarize(get_restaurant = min(time))
+
+leave_restaurant_time16 <- (log_participant16%>%
+          filter(currentMode == 'AtRestaurant'))[, c('date','time')]%>%
+  group_by(date) %>% 
+  summarize(leave_restaurant  = max(time))
+
+start_recreation_time16 <- (log_participant16%>%
+          filter(currentMode == 'AtRecreation'))[, c('date','time')]%>%
+  group_by(date) %>% 
+  summarize(start_recreation = min(time))
+
+end_recreation_time16 <- (log_participant16%>%
+          filter(currentMode == 'AtRecreation'))[, c('date','time')]%>%
+  group_by(date) %>% 
+  summarize(end_recreation  = max(time))
+```
+
+```{r}
+participant4_list <- list(get_home_time4, leave_home_time4, 
+              start_travel_time4,end_travel_time4,
+              start_work_time4,end_work_time4,
+              get_restaurant_time4,leave_restaurant_time4,
+              start_recreation_time4,end_recreation_time4)
+participant4_routine <- participant4_list %>% reduce(full_join, by='date')
+
+participant16_list <- list(get_home_time16, leave_home_time16, 
+              start_travel_time16,end_travel_time16,
+              start_work_time16,end_work_time16,
+              get_restaurant_time16,leave_restaurant_time16,
+              start_recreation_time16,end_recreation_time16)
+participant16_routine <- participant16_list %>% reduce(full_join, by='date')
+```
+
+```{r}
+visielse(participant4_routine)
+visielse(participant16_routine)
+```
