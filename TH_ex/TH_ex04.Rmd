@@ -28,7 +28,7 @@ In this take-home exercise, the following R packages will be used:
 packages = c('lubridate', 'tidyverse', 
              'readr','tmap','sf','sftime',
              'clock','rmarkdown','ViSiElse',
-             'fastDummies')
+             'fastDummies','ggplot2')
 for (p in packages){
   if(!require(p, character.only = T)){
     install.packages(p)
@@ -64,13 +64,11 @@ logs_fread$month <- factor(month(logs_fread$`timestamp`),
                     levels=1:12, 
                     labels=month.abb, 
                     ordered=TRUE) 
-logs_fread$date <- as_date(logs_fread$`timestamp`)
 
 logs_March <- logs_fread %>% filter(month == 'Mar')
-```
-
-```{r}
+logs_March$date <- as_date(logs_March$`timestamp`)
 logs_March$time <- format(logs_March$timestamp, format = "%H:%M:%S")
+logs_March$hour <-hour(logs_March$`timestamp`)
 ```
 
 ```{r}
@@ -110,28 +108,47 @@ ggplot(balance_comparison, aes(date)) +
   
 ```
 
-```{r eval = FALSE,echo = FALSE}
-grouped <- log_participant4 %>% 
-  count(time, currentMode) %>% 
+```{r}
+grouped4 <- log_participant4 %>% 
+  count(hour,currentMode) %>% 
   ungroup() %>%
   na.omit()
-ggplot(grouped, 
-       aes(time, 
-           currentMode, 
+ggplot(grouped4, 
+       aes(hour,currentMode, 
            fill = n)) + 
 geom_tile(color = "white", 
           size = 0.1) + 
-theme_tufte(base_family = "Helvetica") + 
 coord_equal() +
-scale_fill_gradient(name = "Frequency",
+scale_fill_gradient(name = "Frequencies",
                     low = "sky blue", 
                     high = "dark blue") +
-labs(x = NULL, 
+labs(x = 'Hour', 
      y = NULL, 
-     title = "Attacks by weekday and time of day") +
+     title = "Monthly routine for participant 4") +
 theme(axis.ticks = element_blank(),
       plot.title = element_text(hjust = 0.5),
-      legend.title = element_text(size = 8),
-      legend.text = element_text(size = 6) )
+      legend.title = element_text(size = 4),
+      legend.text = element_text(size = 3) )
+
+grouped16 <- log_participant16 %>% 
+  count(hour,currentMode) %>% 
+  ungroup() %>%
+  na.omit()
+ggplot(grouped16, 
+       aes(hour,currentMode, 
+           fill = n)) + 
+geom_tile(color = "white", 
+          size = 0.1) + 
+coord_equal() +
+scale_fill_gradient(name = "Frequencies",
+                    low = "sky blue", 
+                    high = "dark blue") +
+labs(x = 'Hour', 
+     y = NULL, 
+     title = "Monthly routine for participant 16") +
+theme(axis.ticks = element_blank(),
+      plot.title = element_text(hjust = 0.5),
+      legend.title = element_text(size = 4),
+      legend.text = element_text(size = 3) )
 ```
 
