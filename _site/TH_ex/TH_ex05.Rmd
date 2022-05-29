@@ -1,0 +1,167 @@
+---
+title: "Take-home exercise 5"
+description: |
+  ISSS608 Visual Analytics Take-home Exercise 5
+author:
+  - name: Jiarui Cui
+    url: www.linkedin.com/in/jiarui-cui-482232195
+    affiliation: School of Computing and Information Systems
+    affiliation_url: https://scis.smu.edu.sg/
+date: "`r Sys.Date()`"
+output: distill::distill_article
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Overview
+
+This take-home exercise aims to reveal 
+1. social areas of the city of Engagement, Ohio USA.
+2. visualising and analysing locations with traffic bottleneck of the city of Engagement, Ohio USA.
+
+# Importing Packages
+
+In this take-home Exercise, the following R packages will be used:
+**sf**, an R package specially designed to handle geospatial data in simple feature objects; **readr**, **sf** and **tmap** packages of R.
+
+```{r}
+packages = c('lubridate', 'tidyverse', 'readr',
+             'tmap','sf','sftime','clock','rmarkdown',
+             'ggplot2','gganimate')
+for (p in packages){
+  if(!require(p, character.only = T)){
+    install.packages(p)
+  }
+  library(p,character.only = T)
+}
+```
+
+# Importing wkt data
+
+Well-known text (WKT) is a human readable representation for spatial objects like points, lines, or enclosed areas on a map. Figure below shows the structure of point, line and polygons data in wkt format.
+
+In the code chunk below, read_sf() of sf package is used to parse School.csv Pubs.csv, Apartments.csv, Buildings.csv, Employer.csv, and Restaurants.csv into R as sf data.frames.
+
+```{r}
+schools <- read_sf("Data/wkt/Schools.csv", 
+                   options = "GEOM_POSSIBLE_NAMES=location")
+buildings <- read_sf("Data/wkt/Buildings.csv", 
+                   options = "GEOM_POSSIBLE_NAMES=location")
+apartments <- read_sf("Data/wkt/Apartments.csv", 
+                   options = "GEOM_POSSIBLE_NAMES=location")
+employers <- read_sf("Data/wkt/Employers.csv", 
+                   options = "GEOM_POSSIBLE_NAMES=location")
+pubs <- read_sf("Data/wkt/Pubs.csv", 
+                   options = "GEOM_POSSIBLE_NAMES=location")
+restaurants <- read_sf("Data/wkt/Restaurants.csv", 
+                   options = "GEOM_POSSIBLE_NAMES=location")
+
+logs <- read_sf("Data/ActivityLogs/ParticipantStatusLogs1.csv", 
+                options = "GEOM_POSSIBLE_NAMES=currentLocation")
+```
+
+# Plotting social areas of the city
+
+The code chunk below plots a composite map by combining building polygon features by using tm_polygon(), apartments, employers, pubs, restaurants, and schools.
+
+```{r}
+tmap_mode("view")
+tm_shape(buildings)+
+tm_polygons(col = "grey60",
+           size = 1,
+           border.col = "black",
+           border.lwd = 1) +
+tm_shape(employers) +
+  tm_dots(col = "red") +
+tm_shape(apartments) +
+  tm_dots(col = "lightblue") +
+tm_shape(pubs) +
+  tm_dots(col = "green") +
+tm_shape(restaurants) +
+  tm_dots(col = "blue") +
+tm_shape(schools) +
+  tm_dots(col = "yellow")
+tmap_mode("plot")
+```
+
+```{r}
+tmap_mode("view")
+tm_shape(buildings)+
+tm_polygons(col = "buildingType",
+           palette="Accent",
+           border.col = "black",
+           border.alpha = .5,
+           border.lwd = 0.5)
+tmap_mode("plot")
+```
+
+From the map charts above we can observe that the commercial area locates closer to the center of the city and gather around the transportation junction.
+There are 4 schools scatter in the residence area of the city. 
+
+# Traffic bottleneck of the city
+
+```{r}
+hex <- st_make_grid(buildings, 
+                    cellsize=100, 
+                    square=FALSE) %>%
+  st_sf() %>%
+  rowid_to_column('hex_id')
+```
+
+```{r}
+logs_selected1 <- logs %>%
+  mutate(Timestamp = date_time_parse(timestamp,
+                zone = "",
+                format = "%Y-%m-%dT%H:%M:%S")) %>%
+  mutate(day = get_day(Timestamp),time = format(Timestamp, format = "%H:%M:%S") )%>%
+  filter(currentMode == "Transport",date(Timestamp) == date('2022-03-01'))
+
+points_in_hex1 <- st_join(logs_selected1, 
+                         hex, 
+                         join=st_within)%>%
+  st_set_geometry(NULL) %>%
+  count(name='pointCount', hex_id)
+
+hex_combined1 <- hex %>%
+  left_join(points_in_hex1, 
+            by = 'hex_id') %>%
+  replace(is.na(.), 0)
+
+tm_shape(hex_combined1 %>%
+           filter(pointCount > 0))+
+  tm_fill("pointCount",
+          n = 10,
+          style = "quantile") +
+  tm_borders(alpha = 0.1)
+```
+
+```{r}
+logs_selected2 <- logs %>%
+  mutate(Timestamp = date_time_parse(timestamp,
+                zone = "",
+                format = "%Y-%m-%dT%H:%M:%S")) %>%
+  mutate(day = get_day(Timestamp),time = format(Timestamp, format = "%H:%M:%S") )%>%
+  filter(currentMode == "Transport",date(Timestamp) == date('2022-03-05'))
+
+points_in_hex2 <- st_join(logs_selected2, 
+                         hex, 
+                         join=st_within)%>%
+  st_set_geometry(NULL) %>%
+  count(name='pointCount', hex_id)
+
+hex_combined2 <- hex %>%
+  left_join(points_in_hex2, 
+            by = 'hex_id') %>%
+  replace(is.na(.), 0)
+
+tm_shape(hex_combined2 %>%
+           filter(pointCount > 0))+
+  tm_fill("pointCount",
+          n = 10,
+          style = "quantile") +
+  tm_borders(alpha = 0.1)
+```
+
+According to the two hexagon charts, compared with weekdays, residents tend to go out rather than stay at home on weekends, and their transportation rely on several main roads, making these roads super croweded during the day.
