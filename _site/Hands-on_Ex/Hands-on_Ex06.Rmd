@@ -174,7 +174,7 @@ print(logs_path)
 
 ```{r}
 logs_path_selected <- logs_path %>%
-  filter(participantId==0)
+  filter(participantId==4)
 tmap_mode("view")
 tm_shape(buildings)+
 tm_polygons(col = "grey60",
