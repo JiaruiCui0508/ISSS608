@@ -1,0 +1,181 @@
+---
+title: "Take-home exercise 6"
+description: |
+  ISSS608 Visual Analytics Take-home Exercise 6
+author:
+  - name: Jiarui Cui
+    url: www.linkedin.com/in/jiarui-cui-482232195
+    affiliation: School of Computing and Information Systems
+    affiliation_url: https://scis.smu.edu.sg/
+date: "`r Sys.Date()`"
+output: distill::distill_article
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Overview
+
+This take-home exercise aims to reveal the patterns of community interactions of the city of Engagement, Ohio USA by using social network analysis approach. 
+
+Questions to be answered are displayed as below:
+
+`Consider the social activities in the community. What patterns do you see in the social networks in the town? Describe up to ten significant patterns you observe, with evidence and rationale. Limit your response to 10 images and 500 words.`
+
+# Importing Packages
+
+In this take-home exercise, four network data modelling and visualisation packages will be installed and launched. They are igraph, tidygraph, ggraph and visNetwork. Beside these four packages, tidyverse and lubridate, an R package specially designed to handle and wrangling time data will be installed and launched too.
+
+```{r}
+packages = c('igraph', 'tidygraph', 
+             'ggraph', 'visNetwork', 
+             'lubridate', 'clock',
+             'tidyverse', 'graphlayouts',
+             'ggiraph', 'plotly', 
+             'DT', 'patchwork',
+             'gganimate', 
+             'readxl', 'gifski', 'gapminder',
+             'treemap', 'treemapify',
+             'rPackedBar','ViSiElse','zoo')
+for(p in packages){
+  if(!require(p, character.only = T)){
+    install.packages(p)
+  }
+  library(p, character.only = T)
+}
+```
+
+# Data Preparation
+
+The code chunk below import *Participants.csv* and *SocialNetwork.csv* from the data folder into R by using [`read_csv()`](https://readr.tidyverse.org/reference/read_delim.html) of [**readr**](https://readr.tidyverse.org/) and save it as tibble dataframes respectively called *social_nodes* and *socialnetwork*.
+
+```{r}
+socialnetwork <- read_csv('Data/SocialNetwork.csv')%>%
+  mutate(yearmonth = as.yearmon(timestamp))
+social_nodes <- read_csv('Data/Participants.csv')
+```
+
+This barchart below reveals the social communication density in each month from Mar 2022 to May 2023, from the chart we can observe that the July 2022 and March 2022 possess the largest and smallest density, respectively.
+
+```{r}
+ggplot(data=socialnetwork,
+       aes(x = yearmonth))+
+  geom_bar(fill = "light blue")+
+  ggtitle('Total social connections for each month')
+```
+In this exercise, we will look in to the **March 2022** data for social network analysis. 
+
+**wday()** returns the day of the week as a decimal number or an ordered factor if label is TRUE. The argument abbr is FALSE keep the daya spells in full, i.e. Monday. The function will create a new column in the data.frame i.e. Weekday and the output of wday() will save in this newly created field.
+
+```{r}
+socialnetwork_March <- socialnetwork %>% filter(yearmonth == 'Mar 2022')
+
+socialnetwork_March <- socialnetwork_March %>%
+  mutate(Weekday = wday(timestamp,
+                        label = TRUE,
+                        abbr = FALSE))
+```
+
+In view of this, we will aggregate the individual by senders, receivers, and day of the week. Four functions from dplyr package are used. They are: filter(), group(), summarise(), and ungroup().
+
+In order to see the weekly patterns, a filter that keeps records at least twice connection for each weekday per month is applied. 
+
+```{r}
+March_edges <- socialnetwork_March %>%
+  group_by(participantIdFrom, participantIdTo,Weekday) %>%
+  summarise(Weight = n()) %>%
+  filter(participantIdFrom!=participantIdTo) %>%
+  filter(Weight > 1) %>%
+  ungroup()
+```
+
+In order to block out the noisy nodes which hardly interact with others, nodes are selected within those who appeared in the social network records.
+
+```{r}
+social_nodes <- social_nodes %>% filter(social_nodes$participantId %in% March_edges$participantIdFrom)
+```
+ 
+**tbl_graph()** of tinygraph package is used to build an tidygraph's network graph data.frame.
+
+```{r}
+cgraph <- graph_from_data_frame(March_edges,
+                                vertices = social_nodes) %>%
+  as_tbl_graph()
+cgraph
+```
+
+The code chumk below aims to rearrange the rows in the edges tibble to list those with the highest "weight" first using activate() and then arrange().
+
+```{r}
+cgraph %>%
+  activate(edges) %>%
+  arrange(desc(Weight))
+```
+
+# Graphs and Insights 
+
+From the network graph below it is obersved that there is great amount of interactions among residents, and **the weekly interaction between two residents ranges from 2 to 5**. 
+
+```{r}
+set_graph_style()
+g <- ggraph(cgraph, 
+            layout = "nicely") + 
+  geom_edge_link(aes(width=Weight), 
+                 alpha=0.2) +
+  scale_edge_width(range = c(0.1, 0.7)) +
+  geom_node_point(aes(colour = educationLevel), 
+                  size = 0.5)
+g + theme_graph()
+```
+
+The graph below presents the network for each weekday respectively. From the **bottom left** we can observed that **there are two participants which communicate with each other every day, but only communicate with rest of the communities from Wednesday to Friday**. Also, on the **left of the graph**, there's **a client with bachelor degree have one single connection with the community only from Tuesday to Thursday**.
+
+```{r}
+set_graph_style()
+g <- ggraph(cgraph, 
+            layout = "nicely") + 
+  geom_edge_link(aes(width=Weight), 
+                 alpha=0.2) +
+  scale_edge_width(range = c(0.1, 0.7)) +
+  geom_node_point(aes(colour = educationLevel), 
+                  size = 0.2) +
+  theme(legend.position = 'bottom')
+g + facet_edges(~Weekday)
+```
+Looking at the social network within each education level, it is obvious that **residents with low education level have the least social interaction with residents in the same education level,followed by graduate masters, and then bachelors. Residents with high school or college degree interact most within the level**.
+
+```{r}
+set_graph_style()
+g <- ggraph(cgraph, 
+            layout = "nicely") + 
+  geom_edge_link(aes(width=Weight), 
+                 alpha=0.2) +
+  scale_edge_width(range = c(0.1, 0.7)) +
+  geom_node_point(aes(colour = educationLevel), 
+                  size = 0.5)
+g + facet_nodes(~educationLevel)+
+  th_foreground(foreground = "grey80",  
+                border = TRUE) +
+  theme(legend.position = 'bottom')
+```
+Looking at the network breaking down for each interest group, **generally within each interest group, people with higher education level possess higher betweenness_centrality**.
+
+```{r}
+g <- cgraph %>%
+  mutate(betweenness_centrality = centrality_betweenness()) %>%
+  ggraph(layout = "fr") + 
+  geom_edge_link(aes(width=Weight), 
+                 alpha=0.2) +
+  scale_edge_width(range = c(0.1, 0.7)) +
+  geom_node_point(aes(colour = educationLevel,
+            size=betweenness_centrality*0.0001))
+g + facet_nodes(~interestGroup)
+```
+
+
+
+
+
+
+
