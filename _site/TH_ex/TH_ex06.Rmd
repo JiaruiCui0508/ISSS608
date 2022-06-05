@@ -21,7 +21,7 @@ This take-home exercise aims to reveal the patterns of community interactions of
 
 Questions to be answered are displayed as below:
 
-`Consider the social activities in the community. What patterns do you see in the social networks in the town? Describe up to ten significant patterns you observe, with evidence and rationale. Limit your response to 10 images and 500 words.`
+Consider the social activities in the community. What patterns do you see in the social networks in the town? Describe up to ten significant patterns you observe, with evidence and rationale. Limit your response to 10 images and 500 words.
 
 # Importing Packages
 
@@ -91,9 +91,16 @@ March_edges <- socialnetwork_March %>%
 ```
 
 In order to block out the noisy nodes which hardly interact with others, nodes are selected within those who appeared in the social network records.
+Also, a column called `agegroup` is added into the dataframe. 
 
 ```{r}
-social_nodes <- social_nodes %>% filter(social_nodes$participantId %in% March_edges$participantIdFrom)
+social_nodes <- social_nodes %>% filter(social_nodes$participantId %in%
+                                          March_edges$participantIdFrom)
+
+social_nodes<-social_nodes%>%mutate(agegroup=case_when(age<30~"Below 30",
+                                    age>=30 &age<40~"30-39",
+                                    age>=40 &age<50~"40-49",
+                                    age>=50 ~"50 and above"))
 ```
  
 **tbl_graph()** of tinygraph package is used to build an tidygraph's network graph data.frame.
@@ -159,6 +166,23 @@ g + facet_nodes(~educationLevel)+
                 border = TRUE) +
   theme(legend.position = 'bottom')
 ```
+Looking at the social network within each age level, it is obvious that **residents with age from 40 to 49 have the least social interaction with peers**.
+
+```{r}
+set_graph_style()
+g <- ggraph(cgraph, 
+            layout = "nicely") + 
+  geom_edge_link(aes(width=Weight), 
+                 alpha=0.2) +
+  scale_edge_width(range = c(0.1, 0.7)) +
+  geom_node_point(aes(colour = agegroup), 
+                  size = 0.5)
+g + facet_nodes(~agegroup)+
+  th_foreground(foreground = "grey80",  
+                border = TRUE) +
+  theme(legend.position = 'bottom')
+```
+
 Looking at the network breaking down for each interest group, **generally within each interest group, people with higher education level possess higher betweenness_centrality**.
 
 ```{r}
@@ -173,7 +197,18 @@ g <- cgraph %>%
 g + facet_nodes(~interestGroup)
 ```
 
+Considering the sice of nodes as the joviality level, we can observe from the chart that **within each each group, residents with more social coneections tend to be happier**.
 
+```{r}
+g <- cgraph %>%
+  ggraph(layout = "fr") + 
+  geom_edge_link(aes(width=Weight), 
+                 alpha=0.2) +
+  scale_edge_width(range = c(0.1, 0.7)) +
+  geom_node_point(aes(colour = agegroup,
+            size=joviality*0.00000000001, alpha = 0.1))
+g + facet_nodes(~agegroup)
+```
 
 
 
